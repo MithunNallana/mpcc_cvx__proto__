@@ -19,8 +19,15 @@ n_steps = 50;
 delta_t = 0.1;
 velocity_guess = 0.1*ones(n_steps,1);
 omega_guess = zeros(n_steps,1);
+path_speed_guess = 0.05*ones(n_steps,1);
+
 velocity_max = 5;
 velocity_min = 0;
+path_speed_max = 7;
+path_speed_min = 0;
+path_length_max = arc_param(end,1);
+path_length_min = arc_param(1,1);
+
 acceleration_max = 1;
 acceleration_min = -1;
 omega_max = 2;
@@ -35,14 +42,11 @@ v_smooth_weight = 1;
 w_smooth_weight = 1;
 
 %% MPC bro
-do_bro = true;
-updated = do_bro;
+change_cost = true;
+updated = change_cost;
 
-while(do_bro)
-    s_guess = s_k + cumsum(velocity_guess*delta_t);
-    [ x_path_guess, y_path_guess, theta_path_guess] = progressPath(s_guess, s_k, coff_arc_x, coff_arc_y, arc_param );
-    [ coef_x, coef_y, cons_x, cons_y ] = linearizeModel(initial_x, initial_y, initial_theta, velocity_guess, omega_guess, delta_t, n_steps);
-    [ Ad,Bd,Cd ] = matrixCostConLag(coef_x, coef_y, cons_x, cons_y, x_path_guess, y_path_guess,theta_path_guess, con_weight, lag_weight, n_steps);
+while(change_cost)
+    [ Ad,Bd,Cd ] = matrixLongLatLinear( initial_x, initial_y, initial_theta, s_k, velocity_guess, omega_guess, path_speed_guess, coff_arc_x, coff_arc_y, arc_param, delta_t, n_steps );
     [ A,B,C ] = matrixCostSmooth( Ad,Bd,Cd,v_smooth_weight, w_smooth_weight, initial_velocity, initial_omega, delta_t, n_steps );
     cvx_begin quiet
     variables v_and_w(2*n_steps,1)
